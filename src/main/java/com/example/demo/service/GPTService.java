@@ -1,87 +1,170 @@
 package com.example.demo.service;
+
 import com.example.demo.config.OpenAIConfig;
-import com.google.gson.Gson;
-import com.google.gson.JsonArray;
-import com.google.gson.JsonObject;
-import okhttp3.*;
+import com.example.demo.dto.GPTMessageDto;
+import com.example.demo.dto.request.GPTThreadRunRequestDto;
+import com.example.demo.dto.response.GPTResponseDto;
+import com.example.demo.dto.response.GPTThreadMessagesResponseDto;
+import com.example.demo.dto.response.ParagraphResponseDto;
+import com.fasterxml.jackson.core.JsonProcessingException;
+import com.fasterxml.jackson.databind.ObjectMapper;
+import lombok.RequiredArgsConstructor;
+import lombok.extern.slf4j.Slf4j;
+import org.springframework.http.MediaType;
+import org.springframework.retry.annotation.Backoff;
+import org.springframework.retry.annotation.Retryable;
 import org.springframework.stereotype.Service;
+import org.springframework.web.reactive.function.client.WebClient;
 
-import java.io.IOException;
-import java.util.concurrent.TimeUnit;
-
+@Slf4j
 @Service
+@RequiredArgsConstructor
 public class GPTService {
 
     private final OpenAIConfig openAIConfig;
-    private final Gson gson;
+    private final ObjectMapper objectMapper;
 
-    public GPTService(OpenAIConfig openAIConfig) {
-        this.openAIConfig = openAIConfig;
-        this.gson = new Gson();
+    private final String analysisAssistantId = "asst_7F8tSAM1IluIGFZERbw8i4FS"; // 문단 분석 Assistant
+    private final String refreshAssistantId = "asst_m4sxaWC7YaAcUCjgXkLH8TnQ"; // 특정 섹션 재생성 Assistant
+
+    // ✅ 1️⃣ 문단 분석 실행
+    public ParagraphResponseDto analysisPargraphs(String paragraph) throws Exception {
+        String threadId = createThread();
+        try {
+            addMessageToThread(threadId, paragraph);
+            String runId = runThread(threadId, analysisAssistantId);
+            for (int i = 0; i < 3; i++) {
+                Thread.sleep(10000);
+                ParagraphResponseDto analysisResult = getAnalysisResult(threadId);
+                if (analysisResult != null) {
+                    return analysisResult;
+                }
+            }
+            return null;
+        } finally {
+            deleteThread(threadId);
+        }
     }
 
-    /**
-     * OpenAI ChatCompletion (예시)
-     */
-    public String generateCompletion(String systemInstruction, String userPrompt) {
-        // 1) 메시지 배열
-        JsonArray messages = new JsonArray();
+    // ✅ 2️⃣ 특정 섹션 재생성 실행
+    public String refreshAnalysis(String paragraph, String section) throws Exception{
+        String threadId = createThread();
+        try {
+            addMessageToThread(threadId, "Rewrite the " + section + " for the following text:\n" + paragraph);
+            String runId = runThread(threadId, refreshAssistantId);
+            Thread.sleep(5000);
+            return getRewrittenText(threadId);
+        } finally {
+            deleteThread(threadId);
+        }
+    }
 
-        JsonObject systemMsg = new JsonObject();
-        systemMsg.addProperty("role", "system");
-        systemMsg.addProperty("content", systemInstruction);
-        messages.add(systemMsg);
+    // 🔹 OpenAI API: 새로운 스레드 생성
+    private String createThread() {
+        GPTResponseDto response = WebClient.create(openAIConfig.getApiUrl() + "/threads")
+                .post()
+                .contentType(MediaType.APPLICATION_JSON)
+                .header("Authorization", "Bearer " + openAIConfig.getApiKey())
+                .header("OpenAI-Beta", "assistants=v2")
+                .retrieve()
+                .bodyToMono(GPTResponseDto.class)
+                .block();
 
-        JsonObject userMsg = new JsonObject();
-        userMsg.addProperty("role", "user");
-        userMsg.addProperty("content", userPrompt);
-        messages.add(userMsg);
+        return response != null ? response.getId() : null;
+    }
 
-        // 2) Request Body
-        JsonObject requestBody = new JsonObject();
-        requestBody.add("messages", messages);
-        requestBody.addProperty("model", openAIConfig.getModel());
-        requestBody.addProperty("max_tokens", 1024);
-        requestBody.addProperty("temperature", 0.7);
-
-        // 3) OkHttp 요청
-        OkHttpClient client = new OkHttpClient.Builder()
-                .connectTimeout(60, TimeUnit.SECONDS)    // 연결(Handshake) 타임아웃
-                .writeTimeout(60, TimeUnit.SECONDS)      // 요청 Body 전송 타임아웃
-                .readTimeout(120, TimeUnit.SECONDS)      // 응답 Body 수신 타임아웃
-                .build();;
-
-        RequestBody body = RequestBody.create(
-                requestBody.toString(),
-                MediaType.parse("application/json; charset=utf-8")
-        );
-
-        Request request = new Request.Builder()
-                .url(openAIConfig.getApiUrl())
-                .addHeader("Content-Type", "application/json")
-                .addHeader("Authorization", "Bearer " + openAIConfig.getApiKey())
-                .post(body)
+    // 🔹 OpenAI API: 스레드에 메시지 추가
+    private void addMessageToThread(String threadId, String content) {
+        log.info("메세지 추가...");
+        GPTMessageDto requestDto = GPTMessageDto.builder()
+                .role("user")
+                .content(content)
                 .build();
 
-        // 4) 응답
-        try (Response response = client.newCall(request).execute()) {
-            if (!response.isSuccessful()) {
-                throw new IOException("OpenAI API 호출 실패: " + response);
-            }
-            String responseStr = response.body().string();
+        WebClient.create(openAIConfig.getApiUrl() + "/threads/" + threadId + "/messages")
+                .post()
+                .contentType(MediaType.APPLICATION_JSON)
+                .header("Authorization", "Bearer " + openAIConfig.getApiKey())
+                .header("OpenAI-Beta", "assistants=v2")
+                .bodyValue(requestDto)
+                .retrieve()
+                .bodyToMono(Void.class)
+                .block();
+    }
 
-            // 5) JSON 파싱
-            JsonObject responseJson = gson.fromJson(responseStr, JsonObject.class);
-            JsonArray choices = responseJson.getAsJsonArray("choices");
-            if (choices.size() > 0) {
-                JsonObject choice = choices.get(0).getAsJsonObject();
-                JsonObject msgObj = choice.getAsJsonObject("message");
-                return msgObj.get("content").getAsString().trim();
+    // 🔹 OpenAI API: 스레드 실행
+    private String runThread(String threadId, String assistantId) {
+        log.info("스레드 실행...");
+        GPTThreadRunRequestDto requestDto = GPTThreadRunRequestDto.builder()
+                .assistantId(assistantId)
+                .build();
+
+        GPTResponseDto response = WebClient.create(openAIConfig.getApiUrl() + "/threads/" + threadId + "/runs")
+                .post()
+                .contentType(MediaType.APPLICATION_JSON)
+                .header("Authorization", "Bearer " + openAIConfig.getApiKey())
+                .header("OpenAI-Beta", "assistants=v2")
+                .bodyValue(requestDto)
+                .retrieve()
+                .bodyToMono(GPTResponseDto.class)
+                .block();
+
+        return response != null ? response.getId() : null;
+    }
+
+    // 🔹 OpenAI API: 메시지 리스트에서 분석 결과 가져오기 (Spring Retry 적용)
+    public ParagraphResponseDto getAnalysisResult(String threadId) throws JsonProcessingException, InterruptedException {
+        log.info("분석 결과 조회... {}", threadId);
+            GPTThreadMessagesResponseDto response = getThreadMessages(threadId);
+
+            if (response == null || response.getData().isEmpty()) {
+                throw new RuntimeException("No messages received from GPT.");
             }
-        } catch (IOException e) {
-            e.printStackTrace();
+
+            GPTThreadMessagesResponseDto.MessageData firstMessage = response.getData().get(0);
+            if (!"assistant".equals(firstMessage.getRole()) || firstMessage.getContent().isEmpty()) {
+                log.info("The first message is not from the assistant.");
+                return null;
         }
 
-        return "";
+        return objectMapper.readValue(firstMessage.getContent().get(0).getText().getValue(), ParagraphResponseDto.class);
+    }
+
+    // 🔹 OpenAI API: 특정 섹션 재생성 결과 가져오기 (Spring Retry 적용)
+    public String getRewrittenText(String threadId) {
+        GPTThreadMessagesResponseDto response = getThreadMessages(threadId);
+
+        if (response == null || response.getData().isEmpty()) {
+            throw new RuntimeException("No messages received from GPT.");
+        }
+
+        GPTThreadMessagesResponseDto.MessageData firstMessage = response.getData().get(0);
+        if (!"assistant".equals(firstMessage.getRole())) {
+            throw new RuntimeException("The first message is not from the assistant.");
+        }
+
+        return firstMessage.getContent().get(0).getText().getValue();
+    }
+
+    // 🔹 OpenAI API: 메시지 리스트 가져오기
+    private GPTThreadMessagesResponseDto getThreadMessages(String threadId) {
+        return WebClient.create(openAIConfig.getApiUrl() + "/threads/" + threadId + "/messages")
+                .get()
+                .header("Authorization", "Bearer " + openAIConfig.getApiKey())
+                .header("OpenAI-Beta", "assistants=v2")
+                .retrieve()
+                .bodyToMono(GPTThreadMessagesResponseDto.class)
+                .block();
+    }
+
+    // 🔹 OpenAI API: 스레드 삭제
+    private void deleteThread(String threadId) {
+        WebClient.create(openAIConfig.getApiUrl() + "/threads/" + threadId)
+                .delete()
+                .header("Authorization", "Bearer " + openAIConfig.getApiKey())
+                .header("OpenAI-Beta", "assistants=v2")
+                .retrieve()
+                .toBodilessEntity()
+                .block();
     }
 }
