@@ -28,6 +28,16 @@ public class ParagraphController {
     private final ParagraphService paragraphService;
     private final PdfService pdfService;
 
+    @GetMapping("/brief")
+    public ResponseEntity<?> getParagraphsBriefed(@CurrentUser AuthUser authUser) {
+        return ResponseEntity.ok(paragraphService.getBriefedParagraphs(authUser));
+    }
+
+    @GetMapping("")
+    public ResponseEntity<?> getParagraphs(@CurrentUser AuthUser authUser) {
+        return ResponseEntity.ok(paragraphService.getParagraphs(authUser));
+    }
+
     @PostMapping("/analyze")
     public ResponseEntity<?> analyzeParagraph(@CurrentUser AuthUser authUser,
                                                 @RequestBody ParagraphRequestDto requestDto) throws Exception {
@@ -37,8 +47,8 @@ public class ParagraphController {
         }
 
         // 여러 블록 생성
-        Long id = paragraphService.analyzeParagraph(authUser, paragraph);
-
+        Long id = paragraphService.createParagraph(authUser, paragraph);
+        paragraphService.analyzeParagraph(id);
         return ResponseEntity.ok(id);
     }
 

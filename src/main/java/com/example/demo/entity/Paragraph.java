@@ -1,5 +1,6 @@
 package com.example.demo.entity;
 
+import com.example.demo.dto.response.ParagraphResponseDto;
 import com.fasterxml.jackson.core.type.TypeReference;
 import com.fasterxml.jackson.databind.ObjectMapper;
 import jakarta.persistence.*;
@@ -7,7 +8,6 @@ import lombok.*;
 
 import java.io.IOException;
 import java.util.List;
-import java.util.stream.Collectors;
 
 @Getter
 @Builder
@@ -61,6 +61,9 @@ public class Paragraph extends BaseTimeEntity {
     @ManyToOne(fetch = FetchType.LAZY)
     @JoinColumn(name = "user_id")
     private User user;
+
+    @Enumerated(EnumType.STRING)
+    private ParagraphStatus status;
 
     @PrePersist
     @PreUpdate
@@ -134,6 +137,17 @@ public class Paragraph extends BaseTimeEntity {
             default:
                 throw new IllegalArgumentException("Invalid section name: " + section);
         }
+    }
+
+    public void update(ParagraphResponseDto paragraphResponseDto) {
+        this.title = paragraphResponseDto.getTitle();
+        this.sentenceList = paragraphResponseDto.getSentences();
+        this.summary = paragraphResponseDto.getSummary();
+        this.introduction = paragraphResponseDto.getIntroduction();
+        this.development = paragraphResponseDto.getDevelopment();
+        this.conclusion = paragraphResponseDto.getConclusion();
+        this.wordPointList = paragraphResponseDto.getWordPoints();
+        this.readingPoint = paragraphResponseDto.getReadingPoint();
     }
 
 }
