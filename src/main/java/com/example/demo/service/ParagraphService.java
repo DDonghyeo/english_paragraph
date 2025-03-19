@@ -28,8 +28,13 @@ public class ParagraphService {
         return paragraphRepository.findAllByUserId(authUser.getId()).stream().map(ParagraphBriefResponseDto::from).collect(Collectors.toList());
     }
 
-    public List<ParagraphResponseDto> getParagraphs(AuthUser authUser) {
-        return paragraphRepository.findAllByUserId(authUser.getId()).stream().map(ParagraphResponseDto::from).collect(Collectors.toList());
+    public ParagraphResponseDto getParagraph(AuthUser authUser, Long id) {
+        Paragraph paragraph = paragraphRepository.findById(id).orElseThrow();
+        if (!paragraph.getUser().getId().equals(authUser.getId())) {
+            throw new RuntimeException();
+        }
+
+        return ParagraphResponseDto.from(paragraph);
     }
 
     public Paragraph getParagraphEntity(Long id) {
