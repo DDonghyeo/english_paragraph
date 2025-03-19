@@ -5,6 +5,7 @@ import com.example.demo.entity.ParagraphStatus;
 import com.example.demo.entity.User;
 import lombok.*;
 
+import java.time.LocalDateTime;
 import java.util.List;
 
 @Builder
@@ -23,6 +24,8 @@ public class ParagraphResponseDto {
     private String readingPoint;
     private List<String> sentences;
     private List<String> wordPoints;
+
+    private LocalDateTime createdAt;
 
     public Paragraph toEntity(String paragraph, User user) {
         return Paragraph.builder()
@@ -53,6 +56,7 @@ public class ParagraphResponseDto {
                 .readingPoint(paragraph.getReadingPoint())
                 .sentences(paragraph.getSentenceList())
                 .wordPoints(paragraph.getWordPointList())
+                .createdAt(paragraph.getCreatedAt())
                 .build();
     }
 }
