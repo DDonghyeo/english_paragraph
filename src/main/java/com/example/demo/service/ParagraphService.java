@@ -41,7 +41,7 @@ public class ParagraphService {
         log.info("지문 생성");
         Paragraph save = paragraphRepository.save(
                 Paragraph.builder()
-                        .status(ParagraphStatus.CREATED)
+                        .status(ParagraphStatus.ANALYZING)
                         .paragraph(paragraph)
                         .user(User.builder().id(authUser.getId()).build())
                         .build());
