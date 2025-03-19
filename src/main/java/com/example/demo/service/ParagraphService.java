@@ -38,6 +38,7 @@ public class ParagraphService {
         return ParagraphResponseDto.from(paragraph);
     }
 
+    @Transactional
     public void deleteParagraph(AuthUser authUser, Long id) {
         Paragraph paragraph = paragraphRepository.findById(id).orElseThrow();
         if (!paragraph.getUser().getId().equals(authUser.getId())) {
@@ -51,6 +52,7 @@ public class ParagraphService {
         return paragraphRepository.findById(id).orElseThrow();
     }
 
+    @Transactional
     public void updateParagraph(AuthUser authUser, ParagraphUpdateRequestDto updateRequestDto) {
         Paragraph paragraph = paragraphRepository.findById(updateRequestDto.getId()).orElseThrow();
         if (!paragraph.getUser().getId().equals(authUser.getId())) {
