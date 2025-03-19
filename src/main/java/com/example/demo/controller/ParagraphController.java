@@ -98,9 +98,9 @@ public class ParagraphController {
 
         // HTTP 응답 설정
         return ResponseEntity.ok()
-                .contentType(MediaType.APPLICATION_PDF)  // 명확한 Content-Type 지정
+                .contentType(MediaType.APPLICATION_PDF)
                 .header(HttpHeaders.CONTENT_DISPOSITION, "attachment; filename=\"" + path.getFileName().toString() + "\"")
-                .header(HttpHeaders.CONTENT_LENGTH, String.valueOf(pdfBytes.length)) // 파일 크기 명시
+                .header(HttpHeaders.CONTENT_LENGTH, String.valueOf(pdfBytes.length))
                 .body(pdfBytes);
     }
 

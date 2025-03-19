@@ -47,10 +47,10 @@ public class GPTService {
     }
 
     // ✅ 2️⃣ 특정 섹션 재생성 실행
-    public String refreshAnalysis(String paragraph, String section) throws Exception{
+    public String refreshAnalysis(String paragraph, String section, String prompt) throws Exception{
         String threadId = createThread();
         try {
-            addMessageToThread(threadId, "Rewrite the " + section + " for the following text:\n" + paragraph);
+            addMessageToThread(threadId, "Rewrite the " + section + prompt + " for the following text:\n" + paragraph);
             String runId = runThread(threadId, refreshAssistantId);
             Thread.sleep(5000);
             return getRewrittenText(threadId);

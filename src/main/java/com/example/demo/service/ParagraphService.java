@@ -94,7 +94,7 @@ public class ParagraphService {
             throw new RuntimeException();
         }
 
-        String content = gptService.refreshAnalysis(paragraph.getTextBySection(requestDto.getSection()), requestDto.getSection());
+        String content = gptService.refreshAnalysis(paragraph.getTextBySection(requestDto.getSection()), requestDto.getSection(), requestDto.getPrompt());
         paragraph.updateSection(requestDto.getSection(), content);
         paragraphRepository.save(paragraph);
         return content;
