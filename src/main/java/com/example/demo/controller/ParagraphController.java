@@ -34,8 +34,8 @@ public class ParagraphController {
     }
 
     @GetMapping("")
-    public ResponseEntity<?> getParagraphs(@CurrentUser AuthUser authUser) {
-        return ResponseEntity.ok(paragraphService.getParagraphs(authUser));
+    public ResponseEntity<?> getParagraph(@CurrentUser AuthUser authUser, @RequestParam("id") Long id) {
+        return ResponseEntity.ok(paragraphService.getParagraph(authUser, id));
     }
 
     @PostMapping("/analyze")

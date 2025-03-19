@@ -14,6 +14,7 @@ import java.util.List;
 @NoArgsConstructor
 public class ParagraphResponseDto {
     private String title;
+    private String paragraph;
     private String summary;
     private String introduction;
     private String development;
@@ -43,6 +44,7 @@ public class ParagraphResponseDto {
     public static ParagraphResponseDto from(Paragraph paragraph) {
         return ParagraphResponseDto.builder()
                 .title(paragraph.getTitle())
+                .paragraph(paragraph.getParagraph())
                 .summary(paragraph.getSummary())
                 .introduction(paragraph.getIntroduction())
                 .development(paragraph.getDevelopment())
