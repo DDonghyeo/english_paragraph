@@ -223,19 +223,24 @@ public class PdfService {
 
     private List<String> wrapText(String text, int maxLineLength) {
         List<String> lines = new ArrayList<>();
-        String[] words = text.split(" ");
-        StringBuilder currentLine = new StringBuilder();
 
-        for (String word : words) {
-            if (currentLine.length() + word.length() + 1 > maxLineLength) {
-                lines.add(currentLine.toString().trim()); // ✅ 현재 줄 추가
-                currentLine = new StringBuilder(); // ✅ 새로운 줄 시작
+        // ✅ 먼저 \n 기준으로 큰 줄 구분
+        String[] rawLines = text.split("\\r?\\n");
+
+        for (String rawLine : rawLines) {
+            String[] words = rawLine.split(" ");
+            StringBuilder currentLine = new StringBuilder();
+
+            for (String word : words) {
+                if (currentLine.length() + word.length() + 1 > maxLineLength) {
+                    lines.add(currentLine.toString().trim()); // ✅ 현재 줄 추가
+                    currentLine = new StringBuilder(); // ✅ 새로운 줄 시작
+                }
+                currentLine.append(word).append(" ");
             }
-            currentLine.append(word).append(" ");
-        }
-
-        if (!currentLine.toString().trim().isEmpty()) {
-            lines.add(currentLine.toString().trim()); // ✅ 마지막 줄 추가
+            if (!currentLine.toString().trim().isEmpty()) {
+                lines.add(currentLine.toString().trim());
+            }
         }
 
         return lines;
