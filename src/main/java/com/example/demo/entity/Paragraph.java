@@ -148,6 +148,7 @@ public class Paragraph extends BaseTimeEntity {
         this.conclusion = paragraphResponseDto.getConclusion();
         this.wordPointList = paragraphResponseDto.getWordPoints();
         this.readingPoint = paragraphResponseDto.getReadingPoint();
+        this.grammarPoint = paragraphResponseDto.getGrammarPoint();
         this.status = ParagraphStatus.COMPLETE;
     }
 
