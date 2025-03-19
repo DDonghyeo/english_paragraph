@@ -1,5 +1,6 @@
 package com.example.demo.service;
 import lombok.RequiredArgsConstructor;
+import org.apache.pdfbox.multipdf.PDFMergerUtility;
 import org.apache.pdfbox.pdmodel.PDDocument;
 import org.apache.pdfbox.pdmodel.PDPage;
 import org.apache.pdfbox.pdmodel.PDPageContentStream;
@@ -52,37 +53,33 @@ public class PdfService {
     }
 
     private PDDocument generateAnalysisPdf(String templatePath, List<String> sentences, String fontPath) throws IOException {
-        PDDocument document = PDDocument.load(new File(templatePath)); // ✅ 템플릿 PDF 불러오기
+        PDDocument document = new PDDocument();
+        int linesPerPage = 10;
+        int lineHeight = 50;
+        int startY = 710;
+        int maxLineLength = 85;
+
+        int currentLineCount = 0;
+        PDPage currentPage = importTemplatePage(templatePath);
+        document.addPage(currentPage);
+
         PDFont font = PDType0Font.load(document, new File(fontPath));
-        int linesPerPage = 10;  // ✅ 한 페이지당 최대 줄 수
-        int lineHeight = 50;    // ✅ 줄 간격
-        int startY = 710;       // ✅ 시작 Y 좌표
-        int maxLineLength = 85; // ✅ 최대 글자 수
-
-        PDPage currentPage = document.getPage(0); // ✅ 첫 번째 템플릿 페이지 가져오기
-        int currentLineCount = 0; // ✅ 현재 페이지에서 작성한 줄 수
-
         PDPageContentStream contentStream = new PDPageContentStream(document, currentPage, PDPageContentStream.AppendMode.APPEND, true);
         contentStream.setFont(font, 12);
         contentStream.beginText();
         contentStream.newLineAtOffset(60, startY);
 
         for (String sentence : sentences) {
-            List<String> wrappedLines = wrapText(sentence, maxLineLength); // ✅ 텍스트 줄바꿈 처리
+            List<String> wrappedLines = wrapText(sentence, maxLineLength);
 
             for (String line : wrappedLines) {
-                // ✅ 현재 페이지의 줄 수가 10줄을 넘으면 새로운 템플릿 페이지 추가
                 if (currentLineCount >= linesPerPage) {
                     contentStream.endText();
                     contentStream.close();
 
-                    // ✅ 새로운 템플릿 PDF를 다시 로드하여 새 페이지 가져오기
-                    PDDocument tempDoc = PDDocument.load(new File(templatePath));
-                    PDPage newPage = tempDoc.getPage(0); // ✅ 새 템플릿 페이지 가져오기
-                    document.addPage(newPage); // ✅ 기존 문서에 추가
-//                    tempDoc.close(); // ✅ 임시 문서 닫기
-
-                    currentPage = document.getPage(document.getNumberOfPages() - 1);  // 방금 추가한 페이지 가져오기
+                    // 새 페이지 복제
+                    currentPage = importTemplatePage(templatePath);
+                    document.addPage(currentPage);
                     currentLineCount = 0;
 
                     contentStream = new PDPageContentStream(document, currentPage, PDPageContentStream.AppendMode.APPEND, true);
@@ -91,7 +88,6 @@ public class PdfService {
                     contentStream.newLineAtOffset(60, startY);
                 }
 
-                // ✅ 텍스트 추가
                 contentStream.showText(line);
                 contentStream.newLineAtOffset(0, -lineHeight);
                 currentLineCount++;
@@ -100,7 +96,6 @@ public class PdfService {
 
         contentStream.endText();
         contentStream.close();
-
         return document;
     }
 
@@ -244,5 +239,16 @@ public class PdfService {
         }
 
         return lines;
+    }
+
+    private PDPage importTemplatePage(String templatePath) throws IOException {
+        try (PDDocument tempDoc = PDDocument.load(new File(templatePath))) {
+            // 새로운 빈 문서
+            PDDocument newDoc = new PDDocument();
+            PDFMergerUtility merger = new PDFMergerUtility();
+            merger.appendDocument(newDoc, tempDoc);  // 완벽히 복사
+            PDPage copiedPage = newDoc.getPage(0);
+            return copiedPage;
+        }
     }
 }
