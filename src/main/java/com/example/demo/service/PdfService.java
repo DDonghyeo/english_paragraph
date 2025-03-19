@@ -1,4 +1,5 @@
 package com.example.demo.service;
+import com.example.demo.entity.Fonts;
 import lombok.RequiredArgsConstructor;
 import org.apache.pdfbox.multipdf.PDFMergerUtility;
 import org.apache.pdfbox.pdmodel.PDDocument;
@@ -14,6 +15,7 @@ import java.io.File;
 import java.io.IOException;
 import java.util.ArrayList;
 import java.util.List;
+import java.util.stream.Collectors;
 
 @Service
 @RequiredArgsConstructor
@@ -28,20 +30,33 @@ public class PdfService {
     @Value("${pdf_path.review}")
     private String templateReviewPath;
 
-    @Value("${pdf_path.font}")
-    private String fontPath;
+    @Value("${pdf_path.font.notosanskr-regular}")
+    private String fontPathNotoSansKrRegular;
+
+    @Value("${pdf_path.font.notosansserifkr-medium}")
+    private String fontPathNotoSerifKRMedium;
+
+    @Value("${pdf_path.font.notoserifkr-regular}")
+    private String fontPathNotoSerifKRRegular;
 
 
     public String generatePdf(Long id, String passage, List<String> sentences, String title, String summary,
                               String introduction, String development, String conclusion,
-                              String grammarPoint, String readingPoint, List<String> wordPoint
+                              String grammarPoint, String readingPoint, List<String> wordPoint,
+                              Fonts fonts, int size
 
     ) throws IOException {
         String outputPath = "output_" + id +".pdf";
 
-        PDDocument analysisDoc = generateAnalysisPdf(templateAnalysisPath, sentences, fontPath);
-        PDDocument summaryDoc = generateSummaryPdf(templateSummaryPath, fontPath, passage, title, summary, introduction, development, conclusion);
-        PDDocument reviewDoc = generateReviewPdf(templateReviewPath, fontPath, passage, grammarPoint, readingPoint, wordPoint);
+        String fontPath = getFontPath(fonts);
+
+        sentences = sentences.stream()
+                .map(s -> s.replaceAll("\u200B", "")) // Zero Width Space 제거
+                .collect(Collectors.toList());
+
+        PDDocument analysisDoc = generateAnalysisPdf(templateAnalysisPath, sentences, fontPath, size);
+        PDDocument summaryDoc = generateSummaryPdf(templateSummaryPath, fontPath, passage, title, summary, introduction, development, conclusion, size);
+        PDDocument reviewDoc = generateReviewPdf(templateReviewPath, fontPath, passage, grammarPoint, readingPoint, wordPoint, size);
 
         mergePdfs(outputPath, analysisDoc, summaryDoc, reviewDoc);
 
@@ -52,7 +67,18 @@ public class PdfService {
         return outputPath;
     }
 
-    private PDDocument generateAnalysisPdf(String templatePath, List<String> sentences, String fontPath) throws IOException {
+    private String getFontPath(Fonts fonts) {
+
+        switch (fonts) {
+            case NOTOSANSKR_REGULAR -> { return fontPathNotoSansKrRegular;}
+            case NOTOSERIFKR_MEDIUM -> { return fontPathNotoSerifKRMedium;}
+            case NOTOSERIFKR_REGULAR -> { return fontPathNotoSerifKRRegular;}
+            default -> {return fontPathNotoSerifKRRegular; }
+        }
+
+    }
+
+    private PDDocument generateAnalysisPdf(String templatePath, List<String> sentences, String fontPath, int size) throws IOException {
         PDDocument document = new PDDocument();
         int linesPerPage = 10;
         int lineHeight = 50;
@@ -65,7 +91,7 @@ public class PdfService {
 
         PDFont font = PDType0Font.load(document, new File(fontPath));
         PDPageContentStream contentStream = new PDPageContentStream(document, currentPage, PDPageContentStream.AppendMode.APPEND, true);
-        contentStream.setFont(font, 12);
+        contentStream.setFont(font, size);
         contentStream.beginText();
         contentStream.newLineAtOffset(60, startY);
 
@@ -83,7 +109,7 @@ public class PdfService {
                     currentLineCount = 0;
 
                     contentStream = new PDPageContentStream(document, currentPage, PDPageContentStream.AppendMode.APPEND, true);
-                    contentStream.setFont(font, 12);
+                    contentStream.setFont(font, size);
                     contentStream.beginText();
                     contentStream.newLineAtOffset(60, startY);
                 }
@@ -100,13 +126,13 @@ public class PdfService {
     }
 
     private PDDocument generateSummaryPdf(String templatePath, String fontPath, String passage, String title, String summary,
-                                          String introduction, String development, String conclusion) throws IOException {
+                                          String introduction, String development, String conclusion, int size) throws IOException {
         PDDocument document = PDDocument.load(new File(templatePath));
         PDPage page = document.getPage(0);
         PDPageContentStream contentStream = new PDPageContentStream(document, page, PDPageContentStream.AppendMode.APPEND, true);
 
         PDFont font = PDType0Font.load(document, new File(fontPath));
-        contentStream.setFont(font, 12);
+        contentStream.setFont(font, size);
         contentStream.beginText();
 
         int maxLineLength = 85; // 최대 글자 수 제한
@@ -158,13 +184,13 @@ public class PdfService {
         return document;
     }
 
-    private PDDocument generateReviewPdf(String templatePath, String fontPath, String passage, String grammar, String reading, List<String> wordPoint) throws IOException {
+    private PDDocument generateReviewPdf(String templatePath, String fontPath, String passage, String grammar, String reading, List<String> wordPoint, int size) throws IOException {
         PDDocument document = PDDocument.load(new File(templatePath));
         PDPage page = document.getPage(0);
         PDPageContentStream contentStream = new PDPageContentStream(document, page, PDPageContentStream.AppendMode.APPEND, true);
 
         PDFont font = PDType0Font.load(document, new File(fontPath));
-        contentStream.setFont(font, 12);
+        contentStream.setFont(font, size);
         contentStream.beginText();
 
         int passageMaxLength = 52;  // ✅ Passage 최대 글자 수

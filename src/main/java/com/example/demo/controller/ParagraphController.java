@@ -5,10 +5,12 @@ import com.example.demo.auth.AuthUser;
 import com.example.demo.dto.request.ParagraphRefreshRequestDto;
 import com.example.demo.dto.request.ParagraphRequestDto;
 import com.example.demo.dto.request.ParagraphUpdateRequestDto;
+import com.example.demo.entity.Fonts;
 import com.example.demo.entity.Paragraph;
 import com.example.demo.service.ParagraphService;
 import com.example.demo.service.PdfService;
 import lombok.RequiredArgsConstructor;
+import org.springframework.boot.context.properties.bind.DefaultValue;
 import org.springframework.http.HttpHeaders;
 import org.springframework.http.HttpStatus;
 import org.springframework.http.MediaType;
@@ -75,7 +77,10 @@ public class ParagraphController {
     }
 
     @GetMapping("/generatePdf")
-    public ResponseEntity<byte[]> generatePdf(@CurrentUser AuthUser authUser, @RequestParam("id") Long id) throws IOException {
+    public ResponseEntity<byte[]> generatePdf(@CurrentUser AuthUser authUser,
+                                              @RequestParam("id") Long id,
+                                              @RequestParam("font") @DefaultValue("NOTOSANSKR_REGULAR") Fonts fonts,
+                                              @RequestParam("size") @DefaultValue("12") Integer size) throws IOException {
         Paragraph paragraphEntity = paragraphService.getParagraphEntity(id);
 
         if (!authUser.getId().equals(paragraphEntity.getUser().getId())) {
@@ -89,7 +94,7 @@ public class ParagraphController {
                 paragraphEntity.getSummary(), paragraphEntity.getIntroduction(),
                 paragraphEntity.getDevelopment(), paragraphEntity.getConclusion(),
                 paragraphEntity.getGrammarPoint(), paragraphEntity.getReadingPoint(),
-                paragraphEntity.getWordPointList()
+                paragraphEntity.getWordPointList(), fonts, size
         );
 
         // 파일을 byte[]로 변환
