@@ -1,6 +1,7 @@
 package com.example.demo.service;
 import com.example.demo.auth.AuthUser;
 import com.example.demo.dto.request.ParagraphRefreshRequestDto;
+import com.example.demo.dto.request.ParagraphUpdateRequestDto;
 import com.example.demo.dto.response.ParagraphBriefResponseDto;
 import com.example.demo.dto.response.ParagraphResponseDto;
 import com.example.demo.entity.Paragraph;
@@ -37,8 +38,26 @@ public class ParagraphService {
         return ParagraphResponseDto.from(paragraph);
     }
 
+    public void deleteParagraph(AuthUser authUser, Long id) {
+        Paragraph paragraph = paragraphRepository.findById(id).orElseThrow();
+        if (!paragraph.getUser().getId().equals(authUser.getId())) {
+            throw new RuntimeException();
+        }
+
+        paragraphRepository.delete(paragraph);
+    }
+
     public Paragraph getParagraphEntity(Long id) {
         return paragraphRepository.findById(id).orElseThrow();
+    }
+
+    public void updateParagraph(AuthUser authUser, ParagraphUpdateRequestDto updateRequestDto) {
+        Paragraph paragraph = paragraphRepository.findById(updateRequestDto.getId()).orElseThrow();
+        if (!paragraph.getUser().getId().equals(authUser.getId())) {
+            throw new RuntimeException();
+        }
+
+        paragraph.updateSection(updateRequestDto.getSection(), updateRequestDto.getContent());
     }
 
     @Transactional

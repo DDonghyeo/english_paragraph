@@ -4,6 +4,7 @@ import com.example.demo.annotation.CurrentUser;
 import com.example.demo.auth.AuthUser;
 import com.example.demo.dto.request.ParagraphRefreshRequestDto;
 import com.example.demo.dto.request.ParagraphRequestDto;
+import com.example.demo.dto.request.ParagraphUpdateRequestDto;
 import com.example.demo.entity.Paragraph;
 import com.example.demo.service.ParagraphService;
 import com.example.demo.service.PdfService;
@@ -57,6 +58,20 @@ public class ParagraphController {
                                @RequestBody ParagraphRefreshRequestDto paragraphRefreshRequestDto) throws Exception{
 
         return paragraphService.refreshBlock(authUser, paragraphRefreshRequestDto);
+    }
+
+    @PutMapping("")
+    public ResponseEntity<?> updateBlock(@CurrentUser AuthUser authUser,
+                                         @RequestBody ParagraphUpdateRequestDto updateRequestDto) {
+        paragraphService.updateParagraph(authUser, updateRequestDto);
+        return ResponseEntity.ok(null);
+    }
+
+    @DeleteMapping("")
+    public ResponseEntity<?> deleteParagraph(@CurrentUser AuthUser authUser,
+                                             @RequestParam("id") Long id) {
+        paragraphService.deleteParagraph(authUser, id);
+        return ResponseEntity.ok(null);
     }
 
     @GetMapping("/generatePdf")
