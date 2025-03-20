@@ -80,6 +80,10 @@ public class ParagraphService {
         log.info("분석 시작");
         Paragraph paragraphEntity = paragraphRepository.findById(id).orElseThrow();
         ParagraphResponseDto paragraphResponseDto = gptService.analysisPargraphs(paragraphEntity.getParagraph());
+        if (paragraphResponseDto == null) {
+            paragraphEntity.setStatus(ParagraphStatus.CRASHED);
+            return;
+        }
         paragraphEntity.update(paragraphResponseDto);
         log.info("분석 완료");
     }

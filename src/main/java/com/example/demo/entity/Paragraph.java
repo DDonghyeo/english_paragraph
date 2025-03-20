@@ -152,4 +152,7 @@ public class Paragraph extends BaseTimeEntity {
         this.status = ParagraphStatus.COMPLETE;
     }
 
+    public void setStatus(ParagraphStatus status) {
+        this.status = status;
+    }
 }
