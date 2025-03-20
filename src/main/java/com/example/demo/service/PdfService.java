@@ -12,7 +12,9 @@ import org.springframework.beans.factory.annotation.Value;
 import org.springframework.stereotype.Service;
 
 import java.io.File;
+import java.io.FileInputStream;
 import java.io.IOException;
+import java.io.InputStream;
 import java.util.ArrayList;
 import java.util.List;
 import java.util.stream.Collectors;
@@ -33,7 +35,7 @@ public class PdfService {
     @Value("${pdf_path.font.notosanskr-regular}")
     private String fontPathNotoSansKrRegular;
 
-    @Value("${pdf_path.font.notosansserifkr-medium}")
+    @Value("${pdf_path.font.notoserifkr-medium}")
     private String fontPathNotoSerifKRMedium;
 
     @Value("${pdf_path.font.notoserifkr-regular}")
@@ -89,7 +91,10 @@ public class PdfService {
         PDPage currentPage = importTemplatePage(templatePath);
         document.addPage(currentPage);
 
-        PDFont font = PDType0Font.load(document, new File(fontPath));
+        PDFont font;
+        try (InputStream fontStream = new FileInputStream(fontPath)) {
+            font = PDType0Font.load(document, fontStream, false);
+        }
         PDPageContentStream contentStream = new PDPageContentStream(document, currentPage, PDPageContentStream.AppendMode.APPEND, true);
         contentStream.setFont(font, size);
         contentStream.beginText();
@@ -131,7 +136,10 @@ public class PdfService {
         PDPage page = document.getPage(0);
         PDPageContentStream contentStream = new PDPageContentStream(document, page, PDPageContentStream.AppendMode.APPEND, true);
 
-        PDFont font = PDType0Font.load(document, new File(fontPath));
+        PDFont font;
+        try (InputStream fontStream = new FileInputStream(fontPath)) {
+            font = PDType0Font.load(document, fontStream, false);
+        }
         contentStream.setFont(font, size);
         contentStream.beginText();
 
@@ -189,7 +197,10 @@ public class PdfService {
         PDPage page = document.getPage(0);
         PDPageContentStream contentStream = new PDPageContentStream(document, page, PDPageContentStream.AppendMode.APPEND, true);
 
-        PDFont font = PDType0Font.load(document, new File(fontPath));
+        PDFont font;
+        try (InputStream fontStream = new FileInputStream(fontPath)) {
+            font = PDType0Font.load(document, fontStream, false);
+        }
         contentStream.setFont(font, size);
         contentStream.beginText();
 
