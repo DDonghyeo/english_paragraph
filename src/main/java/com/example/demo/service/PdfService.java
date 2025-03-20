@@ -93,17 +93,17 @@ public class PdfService {
         int maxLineLength = 85;
 
         int currentLineCount = 0;
+        int currentPageNum = 0;
         PDFont font;
         try (InputStream fontStream = new FileInputStream(fontPath)) {
             font = PDType0Font.load(document, fontStream, false);
         }
 
         // 첫 페이지 복사
-        PDPage templatePage = templateDoc.getPage(0);
-        PDPage currentPage = templatePage; // 템플릿에서 직접 복사하지 않고 사용
-        document.addPage(currentPage);
+        document.importPage(templateDoc.getPage(0));
+        PDPage pageToWrite = document.getPage(0);
 
-        PDPageContentStream contentStream = new PDPageContentStream(document, currentPage, PDPageContentStream.AppendMode.APPEND, true);
+        PDPageContentStream contentStream = new PDPageContentStream(document, pageToWrite, PDPageContentStream.AppendMode.APPEND, true);
         contentStream.setFont(font, size);
         contentStream.beginText();
         contentStream.newLineAtOffset(60, startY);
@@ -114,10 +114,11 @@ public class PdfService {
                 if (currentLineCount >= linesPerPage) {
                     contentStream.endText();
                     contentStream.close();
+                    currentPageNum++;
 
                     // 새 페이지 복사
-                    PDPage newPage = templateDoc.getPage(0);
-                    document.addPage(newPage);
+                    document.importPage(templateDoc.getPage(0));
+                    PDPage newPage = document.getPage(currentPageNum);
                     currentLineCount = 0;
 
                     contentStream = new PDPageContentStream(document, newPage, PDPageContentStream.AppendMode.APPEND, true);
